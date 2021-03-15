@@ -1,0 +1,60 @@
+portfolio_file:
+   path: 'dummy_portfolio.csv'
+   schema_fields:
+     ticker:
+       type: "string"
+       description: "The asset ticker on Yahoo Finance."
+       required: True
+     asset_type:
+       type: "string"
+       description: "The type of asset, e.g. 'cash' or 'etf'."
+       required: True
+     broker:
+       type: "string"
+       description: "The broker where the position is held."
+       required: False
+     entry_date:
+       type: "datetime"
+       description: "The date in which the position was entered into."
+       required: True
+       format: "%m/%d/%Y"
+     entry_price:
+       type: "float"
+       description: "The price at which the position was entered into."
+       required: True
+     holdings:
+       type: "float"
+       description: "The number of units bought in the position."
+       required: True
+     entry_cost:
+       type: "float"
+       description: "The total one-off cost of entering into the position, if applicable."
+       required: False
+     annual_cost:
+       type: "float"
+       description: "The annual cost of maintaining the position, if applicable."
+       required: False
+     exit_cost_pct:
+       type: "float"
+       description: "The cost of exiting the position as a percentage of the position's value, if applicable."
+       required: False
+     exit_cost_fixed_fee:
+       type: "float"
+       description: "The fixed cost of exiting the position, if applicable."
+       required: False
+     dividends_received:
+       type: "float"
+       description: "The gross amount of dividends received since the position was opened."
+       required: False
+     dividends_costs:
+       type: "float"
+       description: "The total costs of dividends received since the position was opened, including taxes and fees."
+       required: False
+parameters:
+  tax_rate: 0.28
+tickers_to_replace: # in the yahoo etf holdings some tickers don't match exactly to a single ticker symbol
+  '00700': '0700.HK'
+  'BRK.B': 'BRK-B'
+
+
+
