@@ -1,11 +1,7 @@
 import pandas as pd
 import yfinance as yf
-import yaml
 from datetime import datetime, timedelta
 from get_etf_holdings import get_json_and_replace_tickers
-from styles import style_df, style_indirect_holdings_df
-import argparse
-
 
 def setup_datetime_parameters(
         testing: bool = False,
@@ -179,16 +175,16 @@ def calculate_kpis_portfolio_level(
         portfolio_with_kpis: pd.DataFrame
 ) -> dict:
     portfolio_kpis = {}
-    portfolio_kpis['starting_capital'] = portfolio_with_kpis['entry_value'].sum()
-    portfolio_kpis['costs_paid_so_far'] = portfolio_with_kpis['annual_costs_paid'].sum() \
+    portfolio_kpis['Starting capital'] = portfolio_with_kpis['entry_value'].sum()
+    portfolio_kpis['Costs paid so far'] = portfolio_with_kpis['annual_costs_paid'].sum() \
                                           + portfolio_with_kpis['entry_cost'].sum()
 
-    portfolio_kpis['capital_after_liquidating_pre_tax'] = portfolio_with_kpis['current_value'].sum() \
+    portfolio_kpis['Capital after liquidating pre-tax'] = portfolio_with_kpis['current_value'].sum() \
                                                           - portfolio_with_kpis['exit_cost_total'].sum()
-    portfolio_kpis['capital_after_liquidating_post_tax'] = portfolio_with_kpis['current_value'].sum() \
+    portfolio_kpis['Capital after liquidating post-tax'] = portfolio_with_kpis['current_value'].sum() \
                                                            - portfolio_with_kpis['exit_cost_total'].sum() \
                                                            - portfolio_with_kpis['tax_on_gain'].sum()
-    portfolio_kpis['per_annum_roc_post_tax'] = portfolio_with_kpis['per_annum_roa'].dot(
+    portfolio_kpis['ROC per annum post-tax'] = portfolio_with_kpis['per_annum_roa'].dot(
         portfolio_with_kpis['current_value']) / portfolio_with_kpis['current_value'].sum()
 
     return portfolio_kpis
@@ -264,140 +260,15 @@ def get_indirect_positions(
         cols_to_groupby).first().reset_index()
     result = sums.merge(firsts, on=cols_to_groupby, how='left').sort_values(by='pct_of_portfolio',
                                                                             ascending=False).rename(
-        columns={'current_value': 'current_value_in_portfolio_approx'}
+        columns={
+            'holding_ticker': 'Ticker',
+            'holding_name': 'Name',
+            'current_value': 'Value',
+            'pct_of_portfolio': 'Pct',
+            'holding_daily_return': '∆ daily',
+            'holding_annual_return': '∆ annual',
+        }
     )
 
     return result
 
-def main():
-    parser = argparse.ArgumentParser(description="Produce simple portfolio KPIs for a given portfolio")
-    parser.add_argument("config", type=str, help="The path to a config yaml required to run the program")
-    parser.add_argument("--testdate", type=lambda s: datetime.strptime(s, '%Y-%m-%d'), help="Add a dummy date to test "
-                                                                                            "the program")
-    args = parser.parse_args()
-
-    # Initial setup based on the configuration file
-    with open(args.config) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-
-    csv_path = config['portfolio_file']['path']
-    csv_schema = config['portfolio_file']['schema_fields']
-    tax_rate = config['parameters']['tax_rate']
-    tickers_to_replace = config['tickers_to_replace']
-
-    if args.testdate is not None:
-        testing=True
-        testing_date=args.testdate
-    else:
-        testing = False
-        testing_date = '2021-02-26'
-
-    # get prices
-    portfolio_with_prices = get_portfolio_prices(csv_path, csv_schema, testing=testing, testing_date=testing_date)
-
-    # calculate kpis for the portfolio at asset level
-    portfolio_with_kpis = calculate_kpis_asset_level(portfolio_with_prices, tax_rate, testing=testing, testing_date=testing_date)
-
-    # calculate kpis for the portfolio globally
-    portfolio_global_kpis = calculate_kpis_portfolio_level(portfolio_with_kpis)
-    portfolio_global_kpis_df = pd.DataFrame.from_dict(portfolio_global_kpis, orient='index')
-
-    # calculate kpis for the indirect positions
-    portfolio_indirect_positions = get_indirect_positions(portfolio_with_kpis,
-                                                          tickers_to_replace,
-                                                          testing=testing,
-                                                          testing_date=testing_date)
-
-    # styling and saving as html
-    amount_cols = [
-        'starting_capital',
-        'costs_paid_so_far',
-        'capital_after_liquidating_pre_tax',
-        'capital_after_liquidating_post_tax'
-    ]
-    pct_cols = [
-        'per_annum_roc_post_tax'
-    ]
-    portfolio_global_kpis_df_html = style_df(portfolio_global_kpis_df,
-                                             amount_cols=amount_cols,
-                                             pct_cols=pct_cols,
-                                             row_wise_style=True
-                                             ).render()
-    print('Saving global portfolio results...')
-    with open("portfolio_global_kpis.html", "w") as file:
-        file.write(portfolio_global_kpis_df_html)
-
-    amount_cols = [
-        'entry_price',
-        'entry_cost',
-        'annual_cost',
-        'exit_cost_fixed_fee',
-        'dividends_received',
-        'dividends_costs',
-        'lastyears_price',
-        'yesterdays_price',
-        'todays_price',
-        'entry_value',
-        'current_value',
-        'exit_cost_total',
-        'net_gain_ex_dividend_pre_tax',
-        'tax_on_gain',
-        'annual_costs_paid',
-        'net_gain_ex_dividend',
-        'net_gain'
-    ]
-    pct_cols = [
-        'exit_cost_pct',
-        '1_day_roa',
-        'per_annum_roa_ex_dividends',
-        'per_annum_roa'
-    ]
-    date_cols = [
-        'entry_date',
-        'today_dt'
-    ]
-    float_cols = [
-        'holdings',
-        'years_since_entry'
-    ]
-    portfolio_with_kpis_html = style_df(portfolio_with_kpis.T,
-                                        amount_cols=amount_cols,
-                                        pct_cols=pct_cols,
-                                        date_cols=date_cols,
-                                        float_cols=float_cols,
-                                        row_wise_style=True
-                                        ).render()
-    print('Saving asset level results...')
-    with open("portfolio_with_kpis.html", "w") as file:
-        file.write(portfolio_with_kpis_html)
-
-    amount_cols = [
-        'current_value_in_portfolio_approx'
-    ]
-    pct_cols = [
-        'pct_of_portfolio',
-        'holding_daily_return',
-        'holding_annual_return'
-    ]
-    bar_cols = [
-        'current_value_in_portfolio_approx',
-        'holding_daily_return',
-        'holding_annual_return'
-    ]
-    str_cols = [
-        'holding_ticker',
-        'holding_name'
-    ]
-    portfolio_indirect_positions_html = style_indirect_holdings_df(portfolio_indirect_positions,
-                                                                   amount_cols=amount_cols,
-                                                                   pct_cols=pct_cols,
-                                                                   bar_cols=bar_cols,
-                                                                   str_cols=str_cols
-                                                                   ).render()
-    print('Saving indirect positions results...')
-    with open("portfolio_indirect_positions.html", "w") as file:
-        file.write(portfolio_indirect_positions_html)
-    print('Done.')
-
-if __name__ == "__main__":
-    main()

@@ -9,7 +9,7 @@ def style_df(
         float_cols: list = [],
         str_cols: list = [],
         row_wise_style: bool = False,
-        max_col_width: str = '230px'
+        max_col_width: str = '180px'
 )-> Styler:
 
     format_dict = {}
@@ -31,26 +31,26 @@ def style_df(
         format_dict[col] = float_format
 
     for col in str_cols:
-        df[col] = df[col].str[:23]
+        df[col] = df[col].str[:18]
 
     t_style = [
         dict(selector="th", props=[
             ("text-align", "center"),
             ("text-weight", "bold"),
-            ("font-size", "14"),
+            ("font-size", "12"),
             ("font-family", "monospace"),
             ("width", max_col_width)
         ]),
         dict(selector="index", props=[
             ("text-align", "center"),
             ("text-weight", "bold"),
-            ("font-size", "14"),
+            ("font-size", "12"),
             ("font-family", "monospace"),
         ]),
         dict(selector="td", props=[
             ("text-align", "center"),
             ("text-weight", "bold"),
-            ("font-size", "12"),
+            ("font-size", "10"),
             ("font-family", "monospace"),
             ("width", max_col_width),
         ]),
@@ -74,7 +74,7 @@ def style_indirect_holdings_df(
         date_cols: list = [],
         float_cols: list = [],
         str_cols: list = [],
-        bar_cols: list = ['current_value_in_portfolio_approx', 'pct_of_portfolio'],
+        bar_cols: list = ['Value', 'Pct'],
         bar_neg_color: str = 'lightcoral',
         bar_pos_color: str = 'lightgreen'
 )-> Styler:
