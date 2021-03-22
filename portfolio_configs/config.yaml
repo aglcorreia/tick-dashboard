@@ -1,5 +1,5 @@
 portfolio_file:
-   path: 'dummy_portfolio.csv'
+   path: 'portfolio_configs/dummy_portfolio.csv'
    schema_fields:
      ticker:
        type: "string"
@@ -55,6 +55,12 @@ parameters:
 tickers_to_replace: # in the yahoo etf holdings some tickers don't match exactly to a single ticker symbol
   '00700': '0700.HK'
   'BRK.B': 'BRK-B'
+emails:
+  receiver_email: an@gmail.com
+  sender_email: another@gmail.com
+  sender_email_oauth_client_id: <some-id>
+  sender_email_oauth_client_secret: <some-secret>
+  sender_email_oauth_refresh_token: <some-token>
 
 
 
