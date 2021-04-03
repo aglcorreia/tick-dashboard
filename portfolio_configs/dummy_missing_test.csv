@@ -1,7 +1,0 @@
-ticker,asset_type,entry_date,entry_price,holdings,entry_cost,annual_cost,exit_cost_pct,exit_cost_fixed_fee,dividends_received,dividends_costs
-cash,cash,1/12/2021,1,10000.69,0,0,0,0,0,0
-cash,cash,2/15/2021,1,10000.33,0,0,0,0,0,0
-msft,etf,10/12/2018,107.1,20,12.48,9.84,0.0026,0,86.83,28.10
-msft,etf,3/13/2020,160,50,24.96,9.84,0.0026,0,160.37,48.00
-aapl,etf,2/10/2021,135.27,2,0,2.5,0,0,0.00,0.00
-sq,etf,2/24/2021,244.1,1,2.1,2.5,0,0,0.00,0.00

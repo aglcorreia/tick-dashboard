@@ -42,10 +42,9 @@ def setup_datetime_parameters(
 
 
 def preprocess_portfolio_dataframe(
-        csv_path: str,
+        df: pd.DataFrame,
         csv_schema: dict
 ) -> pd.DataFrame:
-    df = pd.read_csv(csv_path)
     schema_fields = list(csv_schema.keys())
     required_schema_fields = [x for x in schema_fields if csv_schema[x]['required'] == True]
     optional_schema_fields = [x for x in schema_fields if csv_schema[x]['required'] == False]
@@ -120,12 +119,12 @@ def get_ticker_prices(
 
 
 def get_portfolio_prices(
-        csv_path: str,
+        df: pd.DataFrame,
         csv_schema: dict,
         testing: bool = False,
         testing_date: str = '2021-02-26'
 ) -> pd.DataFrame:
-    preprocessed_portfolio = preprocess_portfolio_dataframe(csv_path, csv_schema)
+    preprocessed_portfolio = preprocess_portfolio_dataframe(df, csv_schema)
     yesterdays_prices, lastyears_prices = get_ticker_prices(preprocessed_portfolio, testing, testing_date)
 
     df = preprocessed_portfolio.merge(lastyears_prices, on='ticker', how='left') \

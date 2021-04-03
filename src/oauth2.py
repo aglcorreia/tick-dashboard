@@ -1,4 +1,4 @@
-# Originally taken from https://blog.macuyiko.com/post/2016/how-to-send-html-mails-with-oauth2-and-gmail-in-python.html
+# Adapted from https://blog.macuyiko.com/post/2016/how-to-send-html-mails-with-oauth2-and-gmail-in-python.html
 
 import base64
 import json
@@ -8,6 +8,11 @@ import urllib.request
 
 GOOGLE_ACCOUNTS_BASE_URL = 'https://accounts.google.com'
 REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
+SCOPES = [
+    'https://mail.google.com/',
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/spreadsheets.readonly'
+]
 
 
 def command_to_url(command):
@@ -29,21 +34,21 @@ def url_format_params(params):
     return '&'.join(param_fragments)
 
 
-def generate_permission_url(client_id, scope='https://mail.google.com/'):
+def generate_permission_url(client_id, scope=SCOPES):
     params = {}
     params['client_id'] = client_id
     params['redirect_uri'] = REDIRECT_URI
-    params['scope'] = scope
+    params['scope'] = ' '.join(scope)
     params['response_type'] = 'code'
     return '%s?%s' % (command_to_url('o/oauth2/auth'), url_format_params(params))
 
 
-def call_authorize_tokens(client_id, client_secret, authorization_code):
+def call_authorize_tokens(client_id, client_secret, authorization_code, redirect_uri=REDIRECT_URI):
     params = {}
     params['client_id'] = client_id
     params['client_secret'] = client_secret
     params['code'] = authorization_code
-    params['redirect_uri'] = REDIRECT_URI
+    params['redirect_uri'] = redirect_uri
     params['grant_type'] = 'authorization_code'
     request_url = command_to_url('o/oauth2/token')
     response = urllib.request.urlopen(request_url, urllib.parse.urlencode(params).encode('UTF-8')).read().decode(
@@ -51,11 +56,12 @@ def call_authorize_tokens(client_id, client_secret, authorization_code):
     return json.loads(response)
 
 
-def call_refresh_token(client_id, client_secret, refresh_token):
+def call_refresh_token(client_id, client_secret, refresh_token, redirect_uri=REDIRECT_URI):
     params = {}
     params['client_id'] = client_id
     params['client_secret'] = client_secret
     params['refresh_token'] = refresh_token
+    params['redirect_uri'] = redirect_uri
     params['grant_type'] = 'refresh_token'
     request_url = command_to_url('o/oauth2/token')
     response = urllib.request.urlopen(request_url, urllib.parse.urlencode(params).encode('UTF-8')).read().decode(
@@ -78,8 +84,7 @@ def test_smpt(user, base64_auth_string):
     smtp_conn.docmd('AUTH', 'XOAUTH2 ' + base64_auth_string)
 
 
-def get_authorization(google_client_id, google_client_secret):
-    scope = "https://mail.google.com/"
+def get_authorization(google_client_id, google_client_secret, scope=SCOPES):
     print('Navigate to the following URL to auth:', generate_permission_url(google_client_id, scope))
     authorization_code = input('Enter verification code: ')
     response = call_authorize_tokens(google_client_id, google_client_secret, authorization_code)
@@ -105,4 +110,4 @@ def get_oauth_token_and_update_config(
         access_token, expires_in = refresh_authorization(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN)
 
     auth_string = generate_oauth2_string(sender_email, access_token, as_base64=True)
-    return refresh_token, auth_string
+    return refresh_token, access_token, auth_string

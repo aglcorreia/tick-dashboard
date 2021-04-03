@@ -1,0 +1,63 @@
+parameters:
+  tax_rate: 0.28
+portfolio_file:
+  schema_fields:
+    annual_cost:
+      description: The annual cost of maintaining the position, if applicable.
+      required: false
+      type: float
+    asset_type:
+      description: The type of asset, e.g. 'cash' or 'etf'.
+      required: true
+      type: string
+    broker:
+      description: The broker where the position is held.
+      required: false
+      type: string
+    dividends_costs:
+      description: The total costs of dividends received since the position was opened,
+        including taxes and fees.
+      required: false
+      type: float
+    dividends_received:
+      description: The gross amount of dividends received since the position was opened.
+      required: false
+      type: float
+    entry_cost:
+      description: The total one-off cost of entering into the position, if applicable.
+      required: false
+      type: float
+    entry_date:
+      description: The date in which the position was entered into.
+      format: '%m/%d/%Y'
+      required: true
+      type: datetime
+    entry_price:
+      description: The price at which the position was entered into.
+      required: true
+      type: float
+    exit_cost_fixed_fee:
+      description: The fixed cost of exiting the position, if applicable.
+      required: false
+      type: float
+    exit_cost_pct:
+      description: The cost of exiting the position as a percentage of the position's
+        value, if applicable.
+      required: false
+      type: float
+    holdings:
+      description: The number of units bought in the position.
+      required: true
+      type: float
+    ticker:
+      description: The asset ticker on Yahoo Finance.
+      required: true
+      type: string
+tickers_to_replace:
+  '00700': 0700.HK
+  '6762': 6762.T
+  BRK.B: BRK-B
+  NIBE B: NIBE-B.ST
+  ORSTED: ORSTED.CO
+  STM.SI: STM
+  VWS: VWS.CO
