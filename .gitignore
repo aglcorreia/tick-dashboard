@@ -132,7 +132,4 @@ dmypy.json
 .idea/
 
 # private files
-portfolio_configs/portfolio.csv
-portfolio_configs/config-priv.yaml
-src/test_run_dashboard.py
-src/email_module_alt.py
+configs/vars.yaml

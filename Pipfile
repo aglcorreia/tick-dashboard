@@ -12,6 +12,8 @@ tabulate = "*"
 requests = "*"
 jinja2 = "*"
 matplotlib = "*"
+google-api-python-client = "*"
+gsheets = "*"
 
 [dev-packages]
 

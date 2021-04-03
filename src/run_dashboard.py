@@ -1,15 +1,19 @@
 import argparse
+import os
 import yaml
 import pandas as pd
 from datetime import datetime
 from dashboard import get_portfolio_prices, get_indirect_positions, calculate_kpis_portfolio_level, \
     calculate_kpis_asset_level
 from styles import style_df, style_indirect_holdings_df
-from email_module import create_email_message, send_email_message_oauth2
+from oauth2 import get_oauth_token_and_update_config
+from send_email import create_email_message, send_email_message_oauth
+from get_portfolio_df import get_google_sheet_df
+from utils import set_heroku_config_var
 
 
 def create_html_tables(
-        csv_path: str,
+        df: pd.DataFrame,
         csv_schema: dict,
         testing: bool,
         date_to_use: str,
@@ -17,7 +21,7 @@ def create_html_tables(
         tickers_to_replace: dict
 ):
     # get prices
-    portfolio_with_prices = get_portfolio_prices(csv_path, csv_schema, testing=testing, testing_date=date_to_use)
+    portfolio_with_prices = get_portfolio_prices(df, csv_schema, testing=testing, testing_date=date_to_use)
 
     # calculate kpis for the portfolio at asset level
     portfolio_with_kpis = calculate_kpis_asset_level(portfolio_with_prices, tax_rate, testing=testing,
@@ -124,21 +128,63 @@ def main():
     parser.add_argument("config", type=str, help="The path to a config yaml required to run the program")
     parser.add_argument("--testdate", type=lambda s: datetime.strptime(s, '%Y-%m-%d'), help="Add a dummy date to test "
                                                                                             "the program")
+    parser.add_argument("--local", action='store_true', help="Perform local test. You'll be prompted to input env vars.")
+    parser.add_argument("--dummy", action='store_true',
+                        help="Perform test on dummy portfolio file.")
     args = parser.parse_args()
 
     # Initial setup based on the configuration file
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    csv_path = config['portfolio_file']['path']
     csv_schema = config['portfolio_file']['schema_fields']
     tax_rate = config['parameters']['tax_rate']
     tickers_to_replace = config['tickers_to_replace']
-    sender_email = config['emails']['sender_email']
-    receiver_email = config['emails']['receiver_email']
-    google_client_id = config['emails']['sender_email_oauth_client_id']
-    google_client_secret = config['emails']['sender_email_oauth_client_secret']
-    google_refresh_token = config['emails']['sender_email_oauth_refresh_token']
+
+    # check if it is a local test to setup the necessary env vars, otherwise assumes vars will be set already
+    # note: in local mode google refresh token is assumed to be empty
+    if args.local:
+        with open('./configs/vars.yaml') as local_f:
+            local_config = yaml.load(local_f, Loader=yaml.FullLoader)
+            sender_email = local_config['SENDER_EMAIL']
+            receiver_email = local_config['RECEIVER_EMAIL']
+            google_client_id = local_config['GOOGLE_CLIENT_ID']
+            google_client_secret = local_config['GOOGLE_CLIENT_SECRET']
+            google_refresh_token = local_config['GOOGLE_REFRESH_TOKEN']
+            if args.dummy:
+                google_sheet_id = local_config['GOOGLE_SHEET_DUMMY_ID']
+            else:
+                google_sheet_id = local_config['GOOGLE_SHEET_ID']
+    else:
+        try:
+            sender_email = os.environ['SENDER_EMAIL']
+            receiver_email = os.environ['RECEIVER_EMAIL']
+            google_client_id = os.environ['GOOGLE_CLIENT_ID']
+            google_client_secret = os.environ['GOOGLE_CLIENT_SECRET']
+            google_refresh_token = os.environ['GOOGLE_REFRESH_TOKEN']
+            google_sheet_id = os.environ['GOOGLE_SHEET_ID']
+        except KeyError as err:
+            print(f'Environment variable not available: {err}')
+            exit()
+
+    # get access token or refresh token
+    refresh_token, access_token, auth_string = get_oauth_token_and_update_config(
+        sender_email,
+        google_client_id,
+        google_client_secret,
+        google_refresh_token
+    )
+
+    # set refresh token environment variables
+    if args.local:
+        local_config['GOOGLE_REFRESH_TOKEN'] = refresh_token
+        with open('./configs/vars.yaml', 'w') as change_local_config:
+            yaml.dump(local_config, change_local_config)
+    else:
+        set_heroku_config_var('GOOGLE_REFRESH_TOKEN', refresh_token)
+
+    # read portfolio dataframe from google sheets
+    df_pfolio = get_google_sheet_df(access_token, google_sheet_id)
 
     if args.testdate is not None:
         testing = True
@@ -148,17 +194,11 @@ def main():
         date_to_use = datetime.today().strftime('%Y-%m-%d')
 
     # create the html table outputs
-    create_html_tables(csv_path, csv_schema, testing, date_to_use, tax_rate, tickers_to_replace)
+    create_html_tables(df_pfolio, csv_schema, testing, date_to_use, tax_rate, tickers_to_replace)
 
     # send email
     message = create_email_message(sender_email, receiver_email, date_to_use)
-    refresh_token = send_email_message_oauth2(
-        message, sender_email, receiver_email, google_client_id, google_client_secret, google_refresh_token
-    )
-
-    config['emails']['sender_email_oauth_refresh_token'] = refresh_token
-    with open(args.config, 'w') as f:
-        yaml.dump(config, f)
+    send_email_message_oauth(message, sender_email, receiver_email, google_client_id, auth_string)
 
 
 if __name__ == "__main__":
